@@ -1,0 +1,67 @@
+- hosts: all
+  become:
+    true
+
+  roles:
+
+    - role: test
+      tags: test
+
+    - role: config
+      tags: common, config, app
+
+    - role: exim
+      tags: common, exim, app
+
+    - role: geerlingguy.docker
+      docker_users:
+        - setevoy
+      tags: common, docker, app
+
+    - role: jnv.unattended-upgrades
+      unattended_mail: "{{ notify_email }}"
+      unattended_origins_patterns:
+      - 'origin=Debian,archive=${distro_codename}-security'
+      unattended_automatic_reboot: false
+      unattended_clean_interval: 10
+      tags: common, upgrades, app
+
+    - role: SimpliField.logrotate
+      logrotate_applications:
+      - name: nginx
+        definitions:
+        - logs:
+          - /var/log/nginx*.log
+          options:
+            - size 100M
+            - rotate 5
+            - daily
+            - missingok
+            - notifempty
+            - compress
+            - create 0640 www-data adm
+            - postrotate
+                systemctl reload nginx.service
+            - endscript
+      tags: common, logrotate, app
+                               
+    - role: amplify
+      tags: amplify, monitoring, app
+
+    - role: letsencrypt
+      tags: letsencrypt, web, app
+
+    - role: nginx
+      tags: nginx, web, app
+
+    - role: php-fpm
+      tags: php, web, app
+
+    - role: mysql
+      tags: mysql, app
+
+    - role: simple-backup
+      tags: backup, app
+
+    - role: firefly
+      tags: firefly

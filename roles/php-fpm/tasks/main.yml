@@ -1,0 +1,55 @@
+- name: "Read private env-specific variables from the {{ local_private_repo_location}}/vars/{{ env }}_web_projects.yml"
+  include_vars:
+    file: "{{ local_private_repo_location}}/vars/{{ env }}_web_projects.yml"
+
+#- name: "Add repo GPG"
+#  apt_key:
+#    url: "{{ item }}"
+#    state: present
+#  with_items:
+#    - https://packages.sury.org/php/apt.gpg
+
+#- name: "Add PHP repo"
+#  apt_repository:
+#    repo: "{{ item }}"
+#    state: present
+#  with_items:
+#    - deb https://packages.sury.org/php/ stretch main
+
+- name: "Install PHP-7"
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  with_items:
+    - php
+
+- name: "Install PHP-7 extensions"
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  with_items: "{{ php_7_0.extensions }}"
+
+- name: "Copy PHP-FPM pool configs"
+  template:
+    src: "{{ local_private_repo_location }}/php-fpm/templates/{{ env }}/{{ item.1 }}.conf.j2"
+    dest: "{{ php_7_0.pool_dir }}/{{ item.1 }}.conf"
+    owner: "root"
+    group: "root"
+    mode: 0644
+  with_subelements:
+    - "{{ web_projects }}"
+    - domains
+
+- name: "Delete default www.conf"
+  file:
+    state: absent
+    path: "/etc/php/7.0/fpm/pool.d/www.conf"
+
+- name: "Ensure php7.0-fpm service is running and will run on boot"
+  systemd:
+    name: php7.0-fpm
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
